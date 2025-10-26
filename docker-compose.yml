@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  product-db:
+      image: postgres:15
+      environment:
+        POSTGRES_DB: productdb
+        POSTGRES_USER: postgres
+        POSTGRES_PASSWORD: postgres
+      ports:
+        - "5439:5432"
+      volumes:
+        - product_pg:/var/lib/postgresql/data
+      healthcheck:
+        test: ["CMD-SHELL", "pg_isready -U postgres"]
+        interval: 5s
+        retries: 5
+      networks:
+        - product_network
+  app:
+    build: .
+    container_name: nest_app
+    restart: always
+    depends_on:
+      product-db:
+        condition: service_healthy
+    env_file: .env
+    ports:
+      - "${APP_PORT}:2042"
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    networks:
+      - product_network
+      - kafka_network
+
+networks:
+  product_network:
+    driver: bridge
+  kafka_network:
+    external: true
+    name: orderservice_default
+
+volumes:
+  product_pg:
